@@ -1,4 +1,4 @@
-package main.java.com.medirag.controller;
+package com.medirag.auth.controller;
 
 import com.medirag.auth.dto.AuthResponse;
 import com.medirag.auth.dto.LoginRequest;

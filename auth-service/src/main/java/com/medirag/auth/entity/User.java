@@ -1,4 +1,4 @@
-package main.java.com.medirag.entity;
+package com.medirag.auth.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package main.java.com.medirag.repository;
+package com.medirag.auth.repository;
 
 import com.medirag.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;

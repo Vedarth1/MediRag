@@ -1,4 +1,4 @@
-package main.java.com.medirag.dto;
+package com.medirag.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

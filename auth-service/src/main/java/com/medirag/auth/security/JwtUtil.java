@@ -1,4 +1,4 @@
-package main.java.com.medirag.security;
+package com.medirag.auth.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

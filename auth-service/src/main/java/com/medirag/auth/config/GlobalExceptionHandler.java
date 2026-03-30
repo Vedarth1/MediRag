@@ -1,4 +1,4 @@
-package main.java.com.medirag.config;
+package com.medirag.auth.config;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
