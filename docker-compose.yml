@@ -1,0 +1,113 @@
+version: "3.9"
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: medirag-postgres
+    environment:
+      POSTGRES_USER: medirag
+      POSTGRES_PASSWORD: medirag123
+      POSTGRES_DB: medirag_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - medirag-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: medirag-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - medirag-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: medirag-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    networks:
+      - medirag-net
+
+  # ── Gateway ─────────────────────────────────────────────────
+
+  gateway:
+    build: ./gateway
+    container_name: medirag-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - medirag-net
+
+  # ── Services ────────────────────
+
+  auth-service:
+    build: ./auth-service
+    container_name: medirag-auth
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - medirag-net
+
+  # appointment-service:
+  #   build: ./appointment-service
+  #   container_name: medirag-appointment
+  #   ports:
+  #     - "8082:8082"
+  #   networks:
+  #     - medirag-net
+
+  # health-service:
+  #   build: ./health-service
+  #   container_name: medirag-health
+  #   ports:
+  #     - "8083:8083"
+  #   networks:
+  #     - medirag-net
+
+  # mental-health-service:
+  #   build: ./mental-health-service
+  #   container_name: medirag-mental-health
+  #   ports:
+  #     - "8084:8084"
+  #   networks:
+  #     - medirag-net
+
+  # diagnostic-service:
+  #   build: ./diagnostic-service
+  #   container_name: medirag-diagnostic
+  #   ports:
+  #     - "8085:8085"
+  #   networks:
+  #     - medirag-net
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  medirag-net:
+    driver: bridge

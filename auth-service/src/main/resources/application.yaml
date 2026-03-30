@@ -1,0 +1,46 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/medirag_db?currentSchema=auth
+    username: medirag
+    password: medirag123
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # auto-creates tables on first run
+    properties:
+      hibernate:
+        default_schema: auth  # all queries scoped to auth schema
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+# JWT config — change secret in production!
+jwt:
+  secret: "3f8a2b1c9d4e7f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4"
+  expiration-ms: 86400000    # 24 hours
+
+# Local dev profile
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/medirag_db?currentSchema=auth
+  data:
+    redis:
+      host: localhost
