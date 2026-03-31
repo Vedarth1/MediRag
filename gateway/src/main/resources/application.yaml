@@ -7,6 +7,10 @@ spring:
 
   cloud:
     gateway:
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
       routes:
 
         # Auth Service — /api/auth/**  →  http://auth-service:8081

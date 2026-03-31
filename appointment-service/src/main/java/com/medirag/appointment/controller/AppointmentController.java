@@ -1,0 +1,63 @@
+package com.medirag.appointment.controller;
+
+import com.medirag.appointment.dto.*;
+import com.medirag.appointment.entity.TimeSlot;
+import com.medirag.appointment.service.AppointmentService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/appointments")
+@RequiredArgsConstructor
+public class AppointmentController {
+    
+    private final AppointmentService appointmentService;
+
+    // GET /api/appointments/doctors?specialization=cardiology
+    @GetMapping("/doctors")
+    public ResponseEntity<List<DoctorResponse>> getDoctors(
+            @RequestParam(required = false) String specialization) {
+        return ResponseEntity.ok(appointmentService.getDoctors(specialization));
+    }
+
+    // GET /api/appointments/slots/{doctorId}
+    @GetMapping("/slots/{doctorId}")
+    public ResponseEntity<List<TimeSlot>> getSlots(@PathVariable Long doctorId) {
+        return ResponseEntity.ok(appointmentService.getAvailableSlots(doctorId));
+    }
+
+    // POST /api/appointments/book
+    @PostMapping("/book")
+    public ResponseEntity<AppointmentResponse> book(
+            @Valid @RequestBody BookingRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(appointmentService.bookAppointment(request, authHeader));
+    }
+
+    // GET /api/appointments/my
+    @GetMapping("/my")
+    public ResponseEntity<List<AppointmentResponse>> myAppointments(
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(appointmentService.getMyAppointments(authHeader));
+    }
+
+    // PUT /api/appointments/{id}/cancel
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<AppointmentResponse> cancel(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(appointmentService.cancelAppointment(id, authHeader));
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> health() {
+        return ResponseEntity.ok(Map.of("status", "Appointment service is running"));
+    }
+}
