@@ -1,7 +1,7 @@
 package com.medirag.appointment.controller;
 
 import com.medirag.appointment.dto.*;
-import com.medirag.appointment.entity.TimeSlot;
+import com.medirag.appointment.dto.TimeSlotResponse;
 import com.medirag.appointment.service.AppointmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class AppointmentController {
 
     // GET /api/appointments/slots/{doctorId}
     @GetMapping("/slots/{doctorId}")
-    public ResponseEntity<List<TimeSlot>> getSlots(@PathVariable Long doctorId) {
+    public ResponseEntity<List<TimeSlotResponse>> getSlots(@PathVariable Long doctorId) {
         return ResponseEntity.ok(appointmentService.getAvailableSlots(doctorId));
     }
 

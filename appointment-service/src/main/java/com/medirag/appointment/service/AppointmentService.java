@@ -3,6 +3,7 @@ package com.medirag.appointment.service;
 import com.medirag.appointment.dto.*;
 import com.medirag.appointment.entity.*;
 import com.medirag.appointment.repository.*;
+import com.medirag.appointment.dto.TimeSlotResponse;
 import com.medirag.appointment.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,8 +66,17 @@ public class AppointmentService {
 
     // ── Get available slots for a doctor ───────────────────────────────────
 
-    public List<TimeSlot> getAvailableSlots(Long doctorId) {
-        return timeSlotRepository.findByDoctorIdAndIsBookedFalse(doctorId);
+    public List<TimeSlotResponse> getAvailableSlots(Long doctorId) {
+        return timeSlotRepository.findByDoctorIdAndIsBookedFalse(doctorId)
+                .stream()
+                    .map(slot -> TimeSlotResponse.builder()
+                            .id(slot.getId())
+                            .doctorId(slot.getDoctor().getId())
+                            .doctorName(slot.getDoctor().getName())
+                            .slotTime(slot.getSlotTime())
+                            .isBooked(slot.getIsBooked())
+                            .build())
+                    .collect(Collectors.toList());
     }
 
     // ── Book an appointment ─────────────────────────────────────────────────
