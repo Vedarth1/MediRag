@@ -85,13 +85,19 @@ services:
     networks:
       - medirag-net
 
-  # health-service:
-  #   build: ./health-service
-  #   container_name: medirag-health
-  #   ports:
-  #     - "8083:8083"
-  #   networks:
-  #     - medirag-net
+  health-service:
+    build: ./health-service
+    container_name: medirag-health
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - medirag-net
 
   # mental-health-service:
   #   build: ./mental-health-service

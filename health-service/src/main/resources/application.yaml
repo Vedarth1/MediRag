@@ -1,0 +1,50 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: health-service
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/medirag_db?currentSchema=health
+    username: medirag
+    password: medirag123
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: health
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+jwt:
+  secret: "3f8a2b1c9d4e7f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4"
+
+openai:
+  api-key: ${OPENAI_API_KEY:your-openai-key}
+  api-url: https://api.openai.com/v1/chat/completions
+  model: gpt-4o-mini
+
+cache:
+  ttl-minutes: 30
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/medirag_db?currentSchema=health
+  data:
+    redis:
+      host: localhost
