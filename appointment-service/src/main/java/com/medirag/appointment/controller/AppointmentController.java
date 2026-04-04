@@ -1,7 +1,6 @@
 package com.medirag.appointment.controller;
 
 import com.medirag.appointment.dto.*;
-import com.medirag.appointment.dto.TimeSlotResponse;
 import com.medirag.appointment.service.AppointmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +53,39 @@ public class AppointmentController {
             @PathVariable Long id,
             @RequestHeader("Authorization") String authHeader) {
         return ResponseEntity.ok(appointmentService.cancelAppointment(id, authHeader));
+    }
+
+    // POST /api/appointments/slots
+    @PostMapping("/slots")
+    public ResponseEntity<SlotResponse> createSlot(
+            @RequestBody CreateSlotRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(appointmentService.createSlot(request, authHeader));
+    }
+
+    // DELETE /api/appointments/slots/{slotId}
+    @DeleteMapping("/slots/{slotId}")
+    public ResponseEntity<Map<String,String>> deleteSlot(
+            @PathVariable Long slotId,
+            @RequestHeader("Authorization") String authHeader) {
+        appointmentService.deleteSlot(slotId, authHeader);
+        return ResponseEntity.ok(Map.of(
+            "message", "Slot deleted successfully",
+            "status", "success"
+        ));
+    }
+
+    // PUT /api/appointments/slots/{slotId}
+    @PutMapping("/slots/{slotId}")
+    public ResponseEntity<SlotResponse> updateSlot(
+            @PathVariable Long slotId,
+            @RequestBody CreateSlotRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+
+        SlotResponse response = appointmentService.updateSlot(slotId, request, authHeader);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/health")

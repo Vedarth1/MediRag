@@ -3,7 +3,6 @@ package com.medirag.appointment.service;
 import com.medirag.appointment.dto.*;
 import com.medirag.appointment.entity.*;
 import com.medirag.appointment.repository.*;
-import com.medirag.appointment.dto.TimeSlotResponse;
 import com.medirag.appointment.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -163,6 +162,107 @@ public class AppointmentService {
         emailService.sendCancellationNotice(saved);
 
         return toAppointmentResponse(saved);
+    }
+
+    // ── Create Appointment Slot by doctor ──────────────────────────────────────────────────
+
+    @Transactional
+    public SlotResponse createSlot(CreateSlotRequest request, String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "");
+
+        String role = jwtUtil.extractRole(token);
+        Long doctorId = jwtUtil.extractUserId(token);
+
+        if (!"DOCTOR".equals(role)) {
+            throw new RuntimeException("Only doctors can create slots");
+        }
+
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+        TimeSlot slot = TimeSlot.builder()
+                .doctor(doctor)
+                .slotTime(request.getSlotTime())
+                .isBooked(false)
+                .build();
+
+        TimeSlot saved = timeSlotRepository.save(slot);
+
+        return SlotResponse.builder()
+                .id(saved.getId())
+                .slotTime(saved.getSlotTime())
+                .isBooked(saved.getIsBooked())
+                .build();
+    }
+    
+    // ── Delete Appointment Slot by doctor ──────────────────────────────────────────────────
+
+    @Transactional
+    public void deleteSlot(Long slotId, String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "");
+
+        String role = jwtUtil.extractRole(token);
+        Long doctorId = jwtUtil.extractUserId(token);
+
+        if (!"DOCTOR".equals(role)) {
+            throw new RuntimeException("Only doctors can delete slots");
+        }
+
+        TimeSlot slot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new RuntimeException("Slot not found"));
+
+        if (!slot.getDoctor().getId().equals(doctorId)) {
+            throw new RuntimeException("You can delete only your slots");
+        }
+
+        if (slot.getIsBooked()) {
+            throw new RuntimeException("Cannot delete a booked slot");
+        }
+
+        timeSlotRepository.delete(slot);
+    }
+
+    // ── Update Appointment Slot by doctor ──────────────────────────────────────────────────
+
+    @Transactional
+    public SlotResponse updateSlot(Long slotId, CreateSlotRequest request, String authHeader) {
+
+        String token = authHeader.replace("Bearer ", "");
+
+        String role = jwtUtil.extractRole(token);
+        Long doctorId = jwtUtil.extractUserId(token);
+
+        // 🔐 Only doctor allowed
+        if (!"DOCTOR".equals(role)) {
+            throw new RuntimeException("Only doctors can update slots");
+        }
+
+        // 📌 Fetch slot
+        TimeSlot slot = timeSlotRepository.findById(slotId)
+                .orElseThrow(() -> new RuntimeException("Slot not found"));
+
+        // 🔐 Ensure doctor owns this slot
+        if (!slot.getDoctor().getId().equals(doctorId)) {
+            throw new RuntimeException("You can update only your slots");
+        }
+
+        // ❌ Prevent updating booked slot
+        if (slot.getIsBooked()) {
+            throw new RuntimeException("Cannot update a booked slot");
+        }
+
+        // 🔄 Update slot time
+        slot.setSlotTime(request.getSlotTime());
+
+        TimeSlot updated = timeSlotRepository.save(slot);
+
+        return SlotResponse.builder()
+                .id(updated.getId())
+                .slotTime(updated.getSlotTime())
+                .isBooked(updated.getIsBooked())
+                .build();
     }
 
     // ── Cache invalidation ──────────────────────────────────────────────────
