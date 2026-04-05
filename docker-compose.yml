@@ -99,13 +99,19 @@ services:
     networks:
       - medirag-net
 
-  # mental-health-service:
-  #   build: ./mental-health-service
-  #   container_name: medirag-mental-health
-  #   ports:
-  #     - "8084:8084"
-  #   networks:
-  #     - medirag-net
+  mental-health-service:
+    build: ./mental-health-service
+    container_name: medirag-mental-health
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - medirag-net
 
   # diagnostic-service:
   #   build: ./diagnostic-service
