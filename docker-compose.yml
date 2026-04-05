@@ -113,13 +113,20 @@ services:
     networks:
       - medirag-net
 
-  # diagnostic-service:
-  #   build: ./diagnostic-service
-  #   container_name: medirag-diagnostic
-  #   ports:
-  #     - "8085:8085"
-  #   networks:
-  #     - medirag-net
+  diagnostic-service:
+    build: ./diagnostic-service
+    container_name: medirag-diagnostic
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    networks:
+      - medirag-net
 
 volumes:
   postgres_data:

@@ -1,0 +1,57 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: diagnostic-service
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/medirag_db?currentSchema=diagnostic
+    username: medirag
+    password: medirag123
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: diagnostic
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+
+  # Allow large file uploads (X-rays can be 5-20MB)
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+jwt:
+  secret: "3f8a2b1c9d4e7f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4"
+
+# MinIO config
+minio:
+  endpoint: http://minio:9000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  scan-bucket: medirag-scans
+  report-bucket: medirag-reports
+  presigned-expiry-minutes: 15
+
+# OpenAI for vision analysis
+openai:
+  api-key: ${OPENAI_API_KEY:your-openai-key}
+  api-url: https://api.openai.com/v1/chat/completions
+  model: gpt-4o
+  
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/medirag_db?currentSchema=diagnostic
+minio:
+  endpoint: http://localhost:9000
