@@ -32,8 +32,8 @@ jwt:
 
 openai:
   api-key: ${OPENAI_API_KEY:your-openai-key}
-  api-url: https://api.openai.com/v1/chat/completions
-  model: gpt-4o-mini
+  api-url: https://api.groq.com/openai/v1/chat/completions
+  model: openai/gpt-oss-120b
 
 cache:
   ttl-minutes: 30
@@ -48,3 +48,10 @@ spring:
   data:
     redis:
       host: localhost
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

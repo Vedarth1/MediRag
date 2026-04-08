@@ -54,6 +54,7 @@ services:
     depends_on:
       - postgres
       - redis
+      - auth-service
     networks:
       - medirag-net
 

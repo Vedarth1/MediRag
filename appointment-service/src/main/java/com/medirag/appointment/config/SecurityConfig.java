@@ -29,7 +29,11 @@ public class SecurityConfig {
                     "/api/appointments/doctors",
                     "/api/appointments/slots/**",
                     "/api/appointments/health",
-                    "/actuator/health"
+                    "/actuator/health",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/api-docs",
+                    "/api-docs/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )

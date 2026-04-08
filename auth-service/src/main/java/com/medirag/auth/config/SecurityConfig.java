@@ -30,7 +30,11 @@ public class SecurityConfig {
                     "/api/auth/register",
                     "/api/auth/login",
                     "/api/auth/health",
-                    "/actuator/health"
+                    "/actuator/health",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/api-docs",
+                    "/api-docs/**"
                 ).permitAll()
                 // Everything else requires authentication
                 .anyRequest().authenticated()

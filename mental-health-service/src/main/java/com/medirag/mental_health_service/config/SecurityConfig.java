@@ -26,8 +26,14 @@ public class SecurityConfig {
                 s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Resources are public — no login needed to browse them
-                .requestMatchers("/api/mental-health/resources").permitAll()
-                .requestMatchers("/api/mental-health/health", "/actuator/health").permitAll()
+                .requestMatchers("/api/mental-health/resources",
+                    "/api/mental-health/health", 
+                    "/actuator/health",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/api-docs",
+                    "/api-docs/**"
+                ).permitAll()
                 // Chat requires a logged-in user
                 .anyRequest().authenticated()
             )
