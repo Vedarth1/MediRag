@@ -158,7 +158,12 @@ public class HealthService {
 
     private MealPlan parseMealPlanFromAI(String aiJson, Long userId, Boolean isAiGenerated) {
         try {
-            Map<String, Object> parsed = objectMapper.readValue(aiJson, Map.class);
+            String clean = aiJson
+                .replaceAll("(?s)```json\\s*", "")
+                .replaceAll("(?s)```\\s*", "")
+                .trim();
+            Map<String, Object> parsed = objectMapper.readValue(clean, Map.class);
+            
             return MealPlan.builder()
                     .userId(userId)
                     .date(LocalDate.now())

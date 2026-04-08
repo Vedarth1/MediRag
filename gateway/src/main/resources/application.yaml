@@ -5,8 +5,29 @@ spring:
   application:
     name: medirag-gateway
 
+  data:
+    redis:
+      host: redis
+      port: 6379
+
   cloud:
     gateway:
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"   # React dev server
+              - "http://localhost:5173"   # Vite dev server
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
@@ -18,30 +39,68 @@ spring:
           uri: http://auth-service:8081
           predicates:
             - Path=/api/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10   # 10 requests/sec
+                redis-rate-limiter.burstCapacity: 20   # allow burst of 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # Appointment Service — /api/appointments/**  →  http://appointment-service:8082
         - id: appointment-service
           uri: http://appointment-service:8082
           predicates:
             - Path=/api/appointments/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # Health & Wellness — /api/health/**  →  http://health-service:8083
         - id: health-service
           uri: http://health-service:8083
           predicates:
             - Path=/api/health/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # Mental Health — /api/mental-health/**  →  http://mental-health-service:8084
         - id: mental-health-service
           uri: http://mental-health-service:8084
           predicates:
             - Path=/api/mental-health/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
         # AI Diagnostic — /api/diagnostics/**  →  http://diagnostic-service:8085
         - id: diagnostic-service
           uri: http://diagnostic-service:8085
           predicates:
             - Path=/api/diagnostics/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5    # lower for file uploads
+                redis-rate-limiter.burstCapacity: 10
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
+
+jwt:
+  secret: "3f8a2b1c9d4e7f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4"
 
 # Local dev profile overrides (for running gateway outside Docker)
 ---
@@ -49,6 +108,11 @@ spring:
   config:
     activate:
       on-profile: local
+
+  data:
+    redis:
+      host: localhost
+
   cloud:
     gateway:
       routes:
@@ -77,4 +141,4 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health, info ,gateway
