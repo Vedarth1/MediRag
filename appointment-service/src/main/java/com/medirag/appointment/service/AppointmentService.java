@@ -30,6 +30,39 @@ public class AppointmentService {
     @Value("${cache.ttl-minutes:10}")
     private long cacheTtlMinutes;
 
+    @Transactional
+    public DoctorResponse registerDoctor(DoctorProfileRequest request, String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        String role  = jwtUtil.extractRole(token);
+        String email = jwtUtil.extractEmail(token);
+
+        // Only DOCTOR role can register a doctor profile
+        if (!"DOCTOR".equals(role)) {
+            throw new RuntimeException("Only users with DOCTOR role can register a doctor profile");
+        }
+
+        // Prevent duplicate doctor profiles
+        if (doctorRepository.existsByEmail(email)) {
+            throw new RuntimeException("Doctor profile already exists for this account");
+        }
+
+        Doctor doctor = Doctor.builder()
+                .name(request.getName())
+                .specialization(request.getSpecialization())
+                .email(email)
+                .phone(request.getPhone())
+                .available(true)
+                .build();
+
+        Doctor saved = doctorRepository.save(doctor);
+
+        // Invalidate doctor list cache
+        redisTemplate.delete("doctors:all");
+        redisTemplate.delete("doctors:" + request.getSpecialization().toLowerCase());
+
+        return toDoctorResponse(saved);
+    }
+
     // ── Get doctors with Redis Cache-Aside pattern ──────────────────────────
 
     public List<DoctorResponse> getDoctors(String specialization) {

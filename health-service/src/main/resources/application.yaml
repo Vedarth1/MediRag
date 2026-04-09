@@ -38,6 +38,13 @@ openai:
 cache:
   ttl-minutes: 30
 
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
 ---
 spring:
   config:
@@ -48,10 +55,3 @@ spring:
   data:
     redis:
       host: localhost
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true

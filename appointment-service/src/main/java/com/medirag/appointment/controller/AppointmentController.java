@@ -18,6 +18,15 @@ public class AppointmentController {
     
     private final AppointmentService appointmentService;
 
+    // POST /api/appointments/doctors — doctor registers their profile
+    @PostMapping("/doctors")
+    public ResponseEntity<DoctorResponse> registerDoctor(
+            @RequestBody DoctorProfileRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(appointmentService.registerDoctor(request, authHeader));
+    }
+
     // GET /api/appointments/doctors?specialization=cardiology
     @GetMapping("/doctors")
     public ResponseEntity<List<DoctorResponse>> getDoctors(

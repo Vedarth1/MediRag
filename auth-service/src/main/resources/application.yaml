@@ -33,6 +33,13 @@ jwt:
   secret: "3f8a2b1c9d4e7f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4"
   expiration-ms: 86400000    # 24 hours
 
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
 # Local dev profile
 ---
 spring:
@@ -44,10 +51,3 @@ spring:
   data:
     redis:
       host: localhost
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    enabled: true
