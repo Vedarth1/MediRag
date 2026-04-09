@@ -78,8 +78,8 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      MAIL_USERNAME: vedarthambilkar@gmail.com 
-      MAIL_PASSWORD: difnnpttwkzsijtp
+      MAIL_USERNAME: ${MAIL_USERNAME:your@gmail.com} 
+      MAIL_PASSWORD: ${MAIL_PASSWORD:your-app-password}
     depends_on:
       - postgres
       - redis
