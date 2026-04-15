@@ -24,38 +24,29 @@ public class DiagnosticService {
     private final MinioService minioService;
     private final AIAnalysisService aiAnalysisService;
     private final JwtUtil jwtUtil;
+    private final PdfReportService pdfReportService;
 
-    // Allowed file types — security: reject non-medical files
     private static final List<String> ALLOWED_TYPES = List.of(
         "image/jpeg", "image/png", "image/webp", "application/pdf"
     );
 
-    // ── Upload and trigger analysis ─────────────────────────────────────────
-
     @Transactional
     public ScanUploadResponse uploadScan(MultipartFile file,
-                                         String scanType,
-                                         String authHeader) {
+                                          String scanType,
+                                          String authHeader) {
         Long patientId = extractUserId(authHeader);
         String patientEmail = extractEmail(authHeader);
 
-        // Validate file type
         String contentType = file.getContentType();
         if (!ALLOWED_TYPES.contains(contentType)) {
-            throw new RuntimeException(
-                "Invalid file type: " + contentType +
-                ". Allowed: JPEG, PNG, WebP, PDF");
+            throw new RuntimeException("Invalid file type: " + contentType);
         }
-
-        // Validate file size (max 20MB enforced here too)
         if (file.getSize() > 20 * 1024 * 1024) {
             throw new RuntimeException("File too large. Maximum size is 20MB.");
         }
 
-        // 1. Upload file to MinIO, get the object path back
         String objectName = minioService.uploadScan(file, patientId);
 
-        // 2. Save scan record to PostgreSQL
         ScanUpload scan = ScanUpload.builder()
                 .patientId(patientId)
                 .patientEmail(patientEmail)
@@ -68,15 +59,9 @@ public class DiagnosticService {
                 .build();
 
         ScanUpload saved = scanRepository.save(scan);
-
-        // 3. Trigger AI analysis asynchronously
-        // The HTTP response returns immediately with UPLOADED status
         triggerAnalysis(saved.getId());
-
         return toScanResponse(saved);
     }
-
-    // ── Async AI analysis ───────────────────────────────────────────────────
 
     @Async
     @Transactional
@@ -85,52 +70,51 @@ public class DiagnosticService {
         if (scan == null) return;
 
         try {
-            // Mark as analysing
             scan.setStatus(ScanUpload.ScanStatus.ANALYSING);
             scanRepository.save(scan);
 
-            // Run AI analysis
             DiagnosticReport report = aiAnalysisService.analyseXray(scan);
+            DiagnosticReport saved = reportRepository.save(report);
+            log.info("Report saved with id={}", saved.getId());
 
-            // Save report
-            reportRepository.save(report);
+            log.info("Calling pdfReportService.generateAndUpload...");
+            String pdfUrl = pdfReportService.generateAndUpload(saved, scan);
+            log.info("PDF URL returned: {}", pdfUrl);
 
-            // Mark scan as complete
+            if (pdfUrl != null) {
+                saved.setReportPdfUrl(pdfUrl);
+                reportRepository.save(saved);
+                log.info("Report updated with PDF URL");
+            } else {
+                log.warn("PDF URL was null — skipping update");
+            }
+
             scan.setStatus(ScanUpload.ScanStatus.COMPLETED);
-            scan.setReport(report);
+            scan.setReport(saved);
             scanRepository.save(scan);
-
-            log.info("Analysis completed for scan {}", scanId);
+            log.info("Analysis complete for scan {}", scanId);
 
         } catch (Exception e) {
-            log.error("Analysis failed for scan {}: {}", scanId, e.getMessage());
+            log.error("Analysis failed for scan {}: {}", scanId, e.getMessage(), e);
             scan.setStatus(ScanUpload.ScanStatus.FAILED);
             scanRepository.save(scan);
         }
     }
 
-    // ── Get patient's scan history ──────────────────────────────────────────
-
     public List<ScanUploadResponse> getMyScan(String authHeader) {
         Long patientId = extractUserId(authHeader);
         return scanRepository.findByPatientIdOrderByUploadedAtDesc(patientId)
-                .stream()
-                .map(this::toScanResponse)
-                .collect(Collectors.toList());
+                .stream().map(this::toScanResponse).collect(Collectors.toList());
     }
-
-    // ── Get full diagnostic report ──────────────────────────────────────────
 
     public DiagnosticReportResponse getReport(Long scanId, String authHeader) {
         Long patientId = extractUserId(authHeader);
 
-        // Ownership check
         ScanUpload scan = scanRepository.findByIdAndPatientId(scanId, patientId)
                 .orElseThrow(() -> new RuntimeException("Scan not found"));
 
         if (scan.getStatus() != ScanUpload.ScanStatus.COMPLETED) {
-            throw new RuntimeException(
-                "Report not ready yet. Current status: " + scan.getStatus());
+            throw new RuntimeException("Report not ready yet. Status: " + scan.getStatus());
         }
 
         DiagnosticReport report = reportRepository.findByScanId(scanId)
@@ -138,8 +122,6 @@ public class DiagnosticService {
 
         return toReportResponse(report, scan);
     }
-
-    // ── Get presigned URL to view the scan image ────────────────────────────
 
     public PresignedUrlResponse getPresignedUrl(Long scanId, String authHeader) {
         Long patientId = extractUserId(authHeader);
@@ -156,8 +138,6 @@ public class DiagnosticService {
                 .build();
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
-
     private Long extractUserId(String authHeader) {
         return jwtUtil.extractUserId(authHeader.replace("Bearer ", ""));
     }
@@ -167,11 +147,8 @@ public class DiagnosticService {
     }
 
     private ScanUpload.ScanType parseScanType(String type) {
-        try {
-            return ScanUpload.ScanType.valueOf(type.toUpperCase());
-        } catch (Exception e) {
-            return ScanUpload.ScanType.XRAY;
-        }
+        try { return ScanUpload.ScanType.valueOf(type.toUpperCase()); }
+        catch (Exception e) { return ScanUpload.ScanType.XRAY; }
     }
 
     private ScanUploadResponse toScanResponse(ScanUpload s) {
@@ -204,7 +181,7 @@ public class DiagnosticService {
                 .summary(r.getSummary())
                 .overallConfidence(r.getOverallConfidence())
                 .findings(findings)
-                .reportPdfUrl(r.getReportPdfUrl())
+                .reportPdfUrl(r.getReportPdfUrl())  // already has localhost URL
                 .generatedAt(r.getGeneratedAt())
                 .build();
     }

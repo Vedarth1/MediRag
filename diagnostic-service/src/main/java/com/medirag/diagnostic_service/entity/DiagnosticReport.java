@@ -37,6 +37,7 @@ public class DiagnosticReport {
     private List<Finding> findings = new ArrayList<>();
 
     // URL to the generated PDF report in MinIO (future feature)
+    @Column(columnDefinition = "TEXT")
     private String reportPdfUrl;
 
     @Column(nullable = false, updatable = false)

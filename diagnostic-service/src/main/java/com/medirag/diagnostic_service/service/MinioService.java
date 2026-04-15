@@ -2,12 +2,14 @@ package com.medirag.diagnostic_service.service;
 
 import io.minio.*;
 import io.minio.http.Method;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -15,7 +17,20 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class MinioService {
 
-    private final MinioClient minioClient;
+    private MinioClient uploadClient;      // internal — http://minio:9000
+    private MinioClient presignedClient;   // external — http://host.docker.internal:9000
+
+    @Value("${minio.endpoint}")
+    private String endpoint;
+
+    @Value("${minio.presigned-endpoint:http://host.docker.internal:9000}")
+    private String presignedEndpoint;
+
+    @Value("${minio.access-key}")
+    private String accessKey;
+
+    @Value("${minio.secret-key}")
+    private String secretKey;
 
     @Value("${minio.scan-bucket}")
     private String scanBucket;
@@ -26,31 +41,65 @@ public class MinioService {
     @Value("${minio.presigned-expiry-minutes:15}")
     private int presignedExpiryMinutes;
 
-    public MinioService(
-            @Value("${minio.endpoint}") String endpoint,
-            @Value("${minio.access-key}") String accessKey,
-            @Value("${minio.secret-key}") String secretKey) {
+    @Value("${minio.public-url:http://localhost:9000}")
+    private String publicUrl;
 
-        this.minioClient = MinioClient.builder()
+    @PostConstruct
+    public void init() {
+        log.info("MinioService init — endpoint={}, presignedEndpoint={}, scanBucket={}, reportBucket={}",
+                endpoint, presignedEndpoint, scanBucket, reportBucket);
+
+        // Upload client stays the same (uses internal network http://minio:9000)
+        this.uploadClient = MinioClient.builder()
                 .endpoint(endpoint)
                 .credentials(accessKey, secretKey)
                 .build();
 
-        // Ensure buckets exist on startup
-        ensureBucketExists(scanBucket);
-        ensureBucketExists(reportBucket);
+        // Presigned client (uses http://localhost:9000)
+        this.presignedClient = MinioClient.builder()
+                .endpoint(presignedEndpoint)
+                .credentials(accessKey, secretKey)
+                .region("us-east-1") // <--- ADD THIS LINE to prevent internal network lookups
+                .build();
+
+        ensureBucketWithRetry(scanBucket);
+        ensureBucketWithRetry(reportBucket);
     }
 
-    // ── Upload a file to MinIO ──────────────────────────────────────────────
+    private void ensureBucketWithRetry(String bucketName) {
+        int maxRetries = 5;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                boolean exists = uploadClient.bucketExists(
+                    BucketExistsArgs.builder().bucket(bucketName).build()
+                );
+                if (!exists) {
+                    uploadClient.makeBucket(
+                        MakeBucketArgs.builder().bucket(bucketName).build()
+                    );
+                    log.info("Created MinIO bucket: {}", bucketName);
+                } else {
+                    log.info("MinIO bucket already exists: {}", bucketName);
+                }
+                return;
+            } catch (Exception e) {
+                log.warn("Attempt {}/{} — bucket {}: {}", attempt, maxRetries, bucketName, e.getMessage());
+                if (attempt < maxRetries) {
+                    try { Thread.sleep(3000L * attempt); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                } else {
+                    log.error("Could not create bucket {} after {} attempts", bucketName, maxRetries);
+                }
+            }
+        }
+    }
 
     public String uploadScan(MultipartFile file, Long patientId) {
         try {
-            // Build a unique object path inside the bucket
-            String extension = getExtension(file.getOriginalFilename());
             String objectName = "xrays/" + patientId + "/"
                     + UUID.randomUUID() + "-" + file.getOriginalFilename();
 
-            minioClient.putObject(
+            uploadClient.putObject(
                 PutObjectArgs.builder()
                     .bucket(scanBucket)
                     .object(objectName)
@@ -59,20 +108,21 @@ public class MinioService {
                     .build()
             );
 
-            log.info("Uploaded scan: {}/{}", scanBucket, objectName);
-            return objectName;   // return the path, not a full URL
+            log.info("Uploaded to MinIO: {}/{}", scanBucket, objectName);
+            return objectName;
 
         } catch (Exception e) {
             log.error("MinIO upload failed: {}", e.getMessage());
-            throw new RuntimeException("Failed to upload file to storage: " + e.getMessage());
+            throw new RuntimeException("Failed to upload file: " + e.getMessage());
         }
     }
 
-    // ── Generate a presigned URL for temporary access ───────────────────────
-
     public String generatePresignedUrl(String objectName) {
         try {
-            return minioClient.getPresignedObjectUrl(
+            // presignedClient uses host.docker.internal:9000
+            // → signs with that host → browser sends Host: localhost:9000
+            // → Docker maps localhost:9000 → minio:9000 → signature matches
+            String presigned = presignedClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                     .method(Method.GET)
                     .bucket(scanBucket)
@@ -80,62 +130,49 @@ public class MinioService {
                     .expiry(presignedExpiryMinutes, TimeUnit.MINUTES)
                     .build()
             );
+
+            // REMOVE the replacement hack.
+            log.info("Presigned URL generated: {}", presigned.substring(0, Math.min(presigned.length(), 80)) + "...");
+            return presigned;
+
         } catch (Exception e) {
             log.error("Failed to generate presigned URL: {}", e.getMessage());
             throw new RuntimeException("Failed to generate access URL");
         }
     }
 
-    // ── Get file as stream (for sending to AI) ──────────────────────────────
-
-    public InputStream getFileStream(String objectName) {
-        try {
-            return minioClient.getObject(
+    public String getBase64Encoded(String objectName) {
+        try (InputStream stream = uploadClient.getObject(
                 GetObjectArgs.builder()
-                    .bucket(scanBucket)
-                    .object(objectName)
-                    .build()
-            );
+                        .bucket(scanBucket)
+                        .object(objectName)
+                        .build())) {
+            byte[] bytes = stream.readAllBytes();
+            return Base64.getEncoder().encodeToString(bytes);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve file from storage");
+            log.error("Failed to read file from MinIO: {}", e.getMessage());
+            throw new RuntimeException("Failed to read file from storage");
         }
     }
 
-    // ── Delete a file ───────────────────────────────────────────────────────
+    public MinioClient getUploadClient() {
+        return uploadClient;
+    }
+
+    public MinioClient getPresignedClient() {
+        return presignedClient;
+    }
 
     public void deleteScan(String objectName) {
         try {
-            minioClient.removeObject(
+            uploadClient.removeObject(
                 RemoveObjectArgs.builder()
-                    .bucket(scanBucket)
-                    .object(objectName)
-                    .build()
+                        .bucket(scanBucket)
+                        .object(objectName)
+                        .build()
             );
         } catch (Exception e) {
-            log.error("Failed to delete object: {}", e.getMessage());
+            log.error("Failed to delete {}: {}", objectName, e.getMessage());
         }
-    }
-
-    // ── Ensure bucket exists — create if not ───────────────────────────────
-
-    private void ensureBucketExists(String bucketName) {
-        try {
-            boolean exists = minioClient.bucketExists(
-                BucketExistsArgs.builder().bucket(bucketName).build()
-            );
-            if (!exists) {
-                minioClient.makeBucket(
-                    MakeBucketArgs.builder().bucket(bucketName).build()
-                );
-                log.info("Created MinIO bucket: {}", bucketName);
-            }
-        } catch (Exception e) {
-            log.error("Failed to ensure bucket {}: {}", bucketName, e.getMessage());
-        }
-    }
-
-    private String getExtension(String filename) {
-        if (filename == null || !filename.contains(".")) return "jpg";
-        return filename.substring(filename.lastIndexOf('.') + 1);
     }
 }
