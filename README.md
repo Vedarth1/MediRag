@@ -62,6 +62,10 @@ Once running, visit:
 - **Build**: Maven 3.9, Docker Compose
 - **Docs**: SpringDoc OpenAPI (Swagger UI)
 
+## Architecture
+
+![My Image](https://github.com/Vedarth1/MediRag/blob/main/Resources/MediRAG.png)
+
 ## Project Report
 
 https://docs.google.com/document/d/1ulWP9ggSW_vwUgjTTFjhJCC-oYw1BQrm0BAJSodKd2Q
