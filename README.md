@@ -61,3 +61,7 @@ Once running, visit:
 - **Security**: JWT (jjwt 0.12.5), BCrypt
 - **Build**: Maven 3.9, Docker Compose
 - **Docs**: SpringDoc OpenAPI (Swagger UI)
+
+## Project Report
+
+https://docs.google.com/document/d/1ulWP9ggSW_vwUgjTTFjhJCC-oYw1BQrm0BAJSodKd2Q
