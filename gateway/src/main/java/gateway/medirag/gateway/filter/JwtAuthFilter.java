@@ -95,7 +95,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1; // Run before all other filters
+        return -1; // Run before all other filters for custom JwtAuthFilter runs
     }
 
     private boolean isPublicPath(String path) {

@@ -6,6 +6,8 @@ import com.medirag.diagnostic_service.entity.Finding;
 import com.medirag.diagnostic_service.entity.ScanUpload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,9 @@ public class AIAnalysisService {
     @Value("${openai.model}")
     private String model;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+    private final RestTemplate restTemplate;
+    
     private final ObjectMapper objectMapper;
     private final MinioService minioService;
 

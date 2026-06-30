@@ -122,9 +122,11 @@ public class AppointmentService {
         String patientEmail = jwtUtil.extractEmail(token);
 
         // 2. Find and validate the slot
-        TimeSlot slot = timeSlotRepository.findById(request.getSlotId())
+        // 2. LOCK SLOT ROW
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(request.getSlotId())
                 .orElseThrow(() -> new RuntimeException("Slot not found"));
-
+        
+        // 3. Validate slot
         if (slot.getIsBooked()) {
             throw new RuntimeException("This slot is already booked");
         }
