@@ -132,6 +132,20 @@ services:
       - minio
     networks:
       - medirag-net
+  
+  embedding-service:
+    build: ./embedding-service
+    container_name: medirag-embedding
+    ports:
+      - "8086:8086"
+    networks:
+      - medirag-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
