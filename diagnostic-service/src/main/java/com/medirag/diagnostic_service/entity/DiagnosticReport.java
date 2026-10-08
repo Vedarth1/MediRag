@@ -40,6 +40,9 @@ public class DiagnosticReport {
     @Column(columnDefinition = "TEXT")
     private String reportPdfUrl;
 
+    @Column(name = "report_text", columnDefinition = "TEXT")
+    private String reportText;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime generatedAt;
 

@@ -5,6 +5,11 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import com.pgvector.PGvector;
+
 @Entity
 @Table(name = "knowledge_chunks", schema = "diagnostic")
 @Data
@@ -35,8 +40,8 @@ public class MedicalKnowledgeChunk {
 
     // Mapped as a plain float[] — the actual `vector` SQL type conversion
     // happens via the custom Hibernate type registered in VectorType.java
-    @Column(nullable = false, columnDefinition = "vector(384)")
-    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.OTHER)
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(columnDefinition = "vector(384)")
     private float[] embedding;
 
     @Column(name = "created_at", nullable = false, updatable = false)

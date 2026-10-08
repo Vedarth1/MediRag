@@ -55,6 +55,13 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
+rag:
+  top-k: 5
+  similarity-threshold: 0.3
+  chunk-size: 500
+  chunk-overlap: 50
+  preliminary-vision-max-tokens: 150
+
 ---
 spring:
   config:

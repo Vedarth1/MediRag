@@ -29,3 +29,12 @@ CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx
     ON diagnostic.knowledge_chunks
     USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
+
+-- Track which pipeline processed the scan
+ALTER TABLE diagnostic.scan_uploads
+    ADD COLUMN IF NOT EXISTS pipeline VARCHAR(10)
+    CHECK (pipeline IN ('IMAGE', 'REPORT'));
+
+-- Store extracted text from report files for debugging and audit
+ALTER TABLE diagnostic.diagnostic_reports
+    ADD COLUMN IF NOT EXISTS report_text TEXT;

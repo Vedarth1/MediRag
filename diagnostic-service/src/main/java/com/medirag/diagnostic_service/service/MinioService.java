@@ -175,4 +175,17 @@ public class MinioService {
             log.error("Failed to delete {}: {}", objectName, e.getMessage());
         }
     }
+    public java.io.InputStream getFileStream(String objectName) {
+    try {
+        return uploadClient.getObject(
+            GetObjectArgs.builder()
+                .bucket(scanBucket)
+                .object(objectName)
+                .build()
+        );
+    } catch (Exception e) {
+        log.error("Failed to stream file from MinIO: {}", e.getMessage());
+        throw new RuntimeException("Failed to retrieve file from storage");
+    }
+}
 }

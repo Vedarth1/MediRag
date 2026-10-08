@@ -51,6 +51,9 @@ public class ScanUpload {
     @Column(nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 
+    @Column(length = 10)
+    private String pipeline;   // "IMAGE" or "REPORT"
+
     @PrePersist
     protected void onCreate() {
         uploadedAt = LocalDateTime.now();

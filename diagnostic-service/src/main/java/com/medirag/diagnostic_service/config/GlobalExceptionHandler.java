@@ -5,6 +5,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.medirag.diagnostic_service.service.ReportTextExtractionService;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,4 +31,14 @@ public class GlobalExceptionHandler {
                 "status", 400, "error", ex.getMessage(),
                 "timestamp", LocalDateTime.now().toString()));
     }
+    @ExceptionHandler(ReportTextExtractionService.ReportExtractionException.class)
+        public ResponseEntity<Map<String, Object>> handleExtractionError(
+                ReportTextExtractionService.ReportExtractionException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "status", 400,
+                "error", ex.getMessage(),
+                "hint", "Supported formats: PDF (text-based), DOCX, TXT",
+                "timestamp", LocalDateTime.now().toString()
+        ));
+        }
 }
